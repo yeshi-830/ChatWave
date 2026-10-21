@@ -637,7 +637,6 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 10,
   },
-
   footerBrand: {
     color: "#64748B",
     fontSize: 9,
