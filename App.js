@@ -15,22 +15,27 @@ import {
   Alert,
 } from "react-native";
 
-const INITIAL_MESSAGES = [
-  {
-    id: "1",
-    text: "Hey! 👋 Welcome to ChatWave.",
-    sender: "other",
-    time: "09:40 AM",
-  },
-  {
-    id: "2",
-    text: "A simple place to connect and chat. Send your first message!",
-    sender: "other",
-    time: "09:40 AM",
-  },
+const EMOJIS = [
+  "😀", "😂", "😍", "🥰", "😊", "😎",
+  "😭", "😢", "😡", "🤔", "🙌", "👏",
+  "❤️", "🔥", "👍", "👎", "🙏", "🎉",
+  "💯", "✨", "💙", "👋", "😴", "🤝",
 ];
 
-const EMOJIS = ["😀", "😂", "❤️", "😍", "👍", "🔥", "🎉", "👋"];
+const INITIAL_MESSAGES = [
+  {
+    id: "welcome-1",
+    text: "Welcome to ChatWave! 👋",
+    time: "Now",
+    sender: "other",
+  },
+  {
+    id: "welcome-2",
+    text: "Send a message to get started. 💙",
+    time: "Now",
+    sender: "other",
+  },
+];
 
 export default function App() {
   const [messageText, setMessageText] = useState("");
@@ -39,84 +44,84 @@ export default function App() {
   const [isTyping, setIsTyping] = useState(false);
 
   const flatListRef = useRef(null);
-  const typingTimerRef = useRef(null);
-  const replyTimerRef = useRef(null);
-
   const { width } = useWindowDimensions();
-  const isCompact = width < 360;
+
+  const isSmallScreen = width < 380;
 
   useEffect(() => {
-    if (messages.length > 2) {
+    if (messages.length > 0) {
       const timer = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 150);
+      }, 100);
 
       return () => clearTimeout(timer);
     }
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    return () => {
-      clearTimeout(typingTimerRef.current);
-      clearTimeout(replyTimerRef.current);
-    };
-  }, []);
-
-  const getCurrentTime = () =>
-    new Date().toLocaleTimeString([], {
+  const getCurrentTime = () => {
+    return new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-
-  const addMessage = (text, sender) => ({
-    id: `${Date.now()}-${Math.random()}`,
-    text,
-    sender,
-    time: getCurrentTime(),
-  });
+  };
 
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
 
-    if (!trimmedMessage) return;
+    if (!trimmedMessage) {
+      return;
+    }
 
-    // Cancel any previous simulated reply timers.
-    clearTimeout(typingTimerRef.current);
-    clearTimeout(replyTimerRef.current);
+    const newMessage = {
+      id: `${Date.now()}-${Math.random()}`,
+      text: trimmedMessage,
+      time: getCurrentTime(),
+      sender: "me",
+    };
 
-    setMessages((previous) => [
-      ...previous,
-      addMessage(trimmedMessage, "me"),
+    setMessages((previousMessages) => [
+      ...previousMessages,
+      newMessage,
     ]);
 
     setMessageText("");
     setShowEmojis(false);
     setIsTyping(true);
 
-    // Demo only: simulate the other person's response.
-    typingTimerRef.current = setTimeout(() => {
-      setIsTyping(false);
+    // Demo response only. This is not a real online chat connection.
+    setTimeout(() => {
+      const replies = [
+        "Thanks for your message! 😊",
+        "That's great! 💙",
+        "I'm here! 👋",
+        "Nice! Tell me more. ✨",
+        "Awesome! 🔥",
+      ];
 
-      replyTimerRef.current = setTimeout(() => {
-        setMessages((previous) => [
-          ...previous,
-          addMessage(
-            "Thanks for your message! 👋 This is a ChatWave demo reply.",
-            "other"
-          ),
-        ]);
-      }, 450);
-    }, 1500);
+      const reply = {
+        id: `${Date.now()}-${Math.random()}`,
+        text: replies[Math.floor(Math.random() * replies.length)],
+        time: getCurrentTime(),
+        sender: "other",
+      };
+
+      setMessages((previousMessages) => [
+        ...previousMessages,
+        reply,
+      ]);
+
+      setIsTyping(false);
+    }, 1600);
   };
 
-  const insertEmoji = (emoji) => {
-    setMessageText((previous) => previous + emoji);
+  const addEmoji = (emoji) => {
+    setMessageText((previousText) => previousText + emoji);
   };
 
   const clearConversation = () => {
     Alert.alert(
-      "Clear conversation?",
-      "This will remove all messages from the current chat.",
+      "Clear conversation",
+      "Are you sure you want to clear all messages?",
       [
         {
           text: "Cancel",
@@ -126,12 +131,8 @@ export default function App() {
           text: "Clear",
           style: "destructive",
           onPress: () => {
-            clearTimeout(typingTimerRef.current);
-            clearTimeout(replyTimerRef.current);
-
             setMessages([]);
             setIsTyping(false);
-            setMessageText("");
             setShowEmojis(false);
           },
         },
@@ -140,71 +141,56 @@ export default function App() {
   };
 
   const renderMessage = ({ item }) => {
-    const isMine = item.sender === "me";
+    const isMyMessage = item.sender === "me";
 
     return (
       <View
         style={[
           styles.messageRow,
-          isMine ? styles.myMessageRow : styles.otherMessageRow,
+          isMyMessage
+            ? styles.myMessageRow
+            : styles.otherMessageRow,
         ]}
       >
-        {!isMine && (
-          <View style={styles.smallAvatar}>
-            <Text style={styles.smallAvatarText}>CW</Text>
+        {!isMyMessage && (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>C</Text>
           </View>
         )}
 
         <View
           style={[
-            styles.messageContent,
-            isMine
-              ? styles.myMessageContent
-              : styles.otherMessageContent,
-            { maxWidth: isCompact ? "84%" : "78%" },
+            styles.messageBubble,
+            isMyMessage
+              ? styles.myMessageBubble
+              : styles.otherMessageBubble,
+            {
+              maxWidth: width * (isSmallScreen ? 0.76 : 0.72),
+            },
           ]}
         >
-          <View
+          <Text
             style={[
-              styles.messageBubble,
-              isMine ? styles.myBubble : styles.otherBubble,
+              styles.messageText,
+              isMyMessage
+                ? styles.myMessageText
+                : styles.otherMessageText,
             ]}
           >
-            <Text
-              style={[
-                styles.messageText,
-                isMine
-                  ? styles.myMessageText
-                  : styles.otherMessageText,
-              ]}
-            >
-              {item.text}
-            </Text>
-          </View>
+            {item.text}
+          </Text>
 
-          <View
+          <Text
             style={[
-              styles.messageMeta,
-              isMine
-                ? styles.myMessageMeta
-                : styles.otherMessageMeta,
+              styles.messageTime,
+              isMyMessage
+                ? styles.myMessageTime
+                : styles.otherMessageTime,
             ]}
           >
-            <Text
-              style={[
-                styles.messageTime,
-                isMine
-                  ? styles.myMessageTime
-                  : styles.otherMessageTime,
-              ]}
-            >
-              {item.time}
-            </Text>
-
-            {isMine && (
-              <Text style={styles.readReceipt}>✓✓</Text>
-            )}
-          </View>
+            {item.time}
+            {isMyMessage ? "  ✓✓" : ""}
+          </Text>
         </View>
       </View>
     );
@@ -214,100 +200,57 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#1237A5"
+        backgroundColor="#2563EB"
       />
 
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
-        {/* HEADER */}
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.brandContainer}>
-              <View style={styles.logo}>
-                <Text style={styles.logoText}>C</Text>
-                <View style={styles.logoWave} />
-              </View>
+          <View style={styles.headerLeft}>
+            <View style={styles.headerAvatar}>
+              <Text style={styles.headerAvatarText}>C</Text>
+            </View>
 
-              <View style={styles.brandInfo}>
-                <Text style={styles.brandName}>ChatWave</Text>
-                <Text style={styles.brandSubtitle}>
-                  Your conversations, connected.
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>ChatWave</Text>
+
+              <View style={styles.onlineRow}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.headerSubtitle}>
+                  {isTyping ? "Typing a message..." : "Online"}
                 </Text>
               </View>
             </View>
-
-            <View style={styles.headerBadge}>
-              <View style={styles.headerBadgeDot} />
-              <Text style={styles.headerBadgeText}>ONLINE</Text>
-            </View>
           </View>
 
-          <View style={styles.contactRow}>
-            <View style={styles.contactAvatarContainer}>
-              <View style={styles.contactAvatar}>
-                <Text style={styles.contactAvatarText}>CW</Text>
-              </View>
-              <View style={styles.onlineDot} />
-            </View>
-
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactName}>Chat Partner</Text>
-              <View style={styles.statusRow}>
-                <View style={styles.statusDot} />
-                <Text style={styles.contactStatus}>
-                  {isTyping ? "Typing a message..." : "Active now · Ready to chat"}
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={clearConversation}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Clear conversation"
-            >
-              <Text style={styles.clearIcon}>⌫</Text>
-              <Text style={styles.clearLabel}>CLEAR</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={clearConversation}
+            accessibilityLabel="Clear conversation"
+            accessibilityRole="button"
+          >
+            <Text style={styles.clearButtonText}>CLEAR</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* CHAT AREA */}
+        {/* Chat area */}
         <View style={styles.chatArea}>
-          <View style={styles.conversationHeading}>
-            <View style={styles.welcomeIcon}>
-              <Text style={styles.welcomeEmoji}>👋</Text>
-            </View>
-
-            <Text style={styles.welcomeTitle}>
-              Your conversation
-            </Text>
-
-            <Text style={styles.welcomeDescription}>
-              Every great conversation starts with a hello.
-            </Text>
-
-            <View style={styles.todayDivider}>
-              <View style={styles.dividerLine} />
-              <View style={styles.todayBadge}>
-                <Text style={styles.todayText}>TODAY</Text>
-              </View>
-              <View style={styles.dividerLine} />
-            </View>
-          </View>
-
           {messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>💬</Text>
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Text style={styles.emptyIcon}>💬</Text>
+              </View>
+
               <Text style={styles.emptyTitle}>
-                Start a fresh conversation
+                No messages yet
               </Text>
-              <Text style={styles.emptyDescription}>
-                Your messages will appear here.
+
+              <Text style={styles.emptySubtitle}>
+                Start a conversation with ChatWave.
               </Text>
             </View>
           ) : (
@@ -316,115 +259,106 @@ export default function App() {
               data={messages}
               renderItem={renderMessage}
               keyExtractor={(item) => item.id}
-              style={styles.messageList}
-              contentContainerStyle={styles.messageListContent}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={
-                Platform.OS === "ios" ? "interactive" : "on-drag"
-              }
+              contentContainerStyle={styles.messagesList}
               showsVerticalScrollIndicator={false}
-              onContentSizeChange={() =>
-                flatListRef.current?.scrollToEnd({
-                  animated: true,
-                })
-              }
-              initialNumToRender={15}
+              keyboardShouldPersistTaps="handled"
             />
           )}
 
-          {/* TYPING INDICATOR */}
+          {/* Typing indicator */}
           {isTyping && (
             <View style={styles.typingRow}>
-              <View style={styles.smallAvatar}>
-                <Text style={styles.smallAvatarText}>CW</Text>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>C</Text>
               </View>
 
               <View style={styles.typingBubble}>
-                <Text style={styles.typingDots}>● ● ●</Text>
-                <Text style={styles.typingLabel}>
-                  Chat Partner is typing
-                </Text>
+                <View style={styles.typingDot} />
+                <View style={styles.typingDot} />
+                <View style={styles.typingDot} />
               </View>
             </View>
           )}
         </View>
 
-        {/* MESSAGE COMPOSER */}
-        <View style={styles.composerArea}>
-          {/* EMOJI PICKER */}
-          {showEmojis && (
-            <View style={styles.emojiPanel}>
-              <Text style={styles.emojiTitle}>Choose an emoji</Text>
-
-              <View style={styles.emojiGrid}>
-                {EMOJIS.map((emoji) => (
-                  <TouchableOpacity
-                    key={emoji}
-                    style={styles.emojiButton}
-                    onPress={() => insertEmoji(emoji)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Insert ${emoji}`}
-                    key={emoji}
-                  >
-                    <Text style={styles.emojiText}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <View style={styles.composer}>
-            <TouchableOpacity
-              style={styles.emojiToggle}
-              onPress={() => setShowEmojis((previous) => !previous)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Toggle emoji picker"
-            >
-              <Text style={styles.emojiToggleText}>😊</Text>
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Message Chat Partner..."
-              placeholderTextColor="#94A3B8"
-              value={messageText}
-              onChangeText={setMessageText}
-              multiline
-              maxLength={2000}
-              returnKeyType="default"
-              textAlignVertical="center"
-              accessibilityLabel="Write a message"
-              onFocus={() => setShowEmojis(false)}
-            />
-
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                !messageText.trim() && styles.sendButtonDisabled,
-              ]}
-              onPress={sendMessage}
-              activeOpacity={0.75}
-              accessibilityLabel="Send message"
-              accessibilityRole="button"
-              accessibilityState={{
-                disabled: !messageText.trim(),
-              }}
-            >
-              <Text style={styles.sendIcon}>➤</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <View style={styles.footerLeft}>
-              <Text style={styles.footerLock}>●</Text>
-              <Text style={styles.footerText}>
-                Made for meaningful conversations
+        {/* Emoji picker */}
+        {showEmojis && (
+          <View style={styles.emojiPanel}>
+            <View style={styles.emojiPanelHeader}>
+              <Text style={styles.emojiPanelTitle}>
+                Choose an emoji
               </Text>
+
+              <TouchableOpacity
+                onPress={() => setShowEmojis(false)}
+                accessibilityLabel="Close emoji picker"
+              >
+                <Text style={styles.closeEmojiButton}>✕</Text>
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.footerBrand}>CHATWAVE</Text>
+            <View style={styles.emojiGrid}>
+              {EMOJIS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.emojiButton}
+                  onPress={() => addEmoji(emoji)}
+                  accessibilityLabel={`Add ${emoji}`}
+                >
+                  <Text style={styles.emojiText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
+        )}
+
+        {/* Message input */}
+        <View style={styles.inputArea}>
+          <TouchableOpacity
+            style={[
+              styles.emojiToggle,
+              showEmojis && styles.emojiToggleActive,
+            ]}
+            onPress={() => setShowEmojis((previous) => !previous)}
+            accessibilityLabel="Open emoji picker"
+            accessibilityRole="button"
+          >
+            <Text style={styles.emojiToggleText}>😊</Text>
+          </TouchableOpacity>
+
+          <TextInput
+            style={styles.textInput}
+            placeholder="Write a message..."
+            placeholderTextColor="#94A3B8"
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={2000}
+            onFocus={() => setShowEmojis(false)}
+            onSubmitEditing={sendMessage}
+            blurOnSubmit={false}
+            returnKeyType="send"
+            accessibilityLabel="Message input"
+          />
+
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              !messageText.trim() && styles.sendButtonDisabled,
+            ]}
+            onPress={sendMessage}
+            disabled={!messageText.trim()}
+            accessibilityLabel="Send message"
+            accessibilityRole="button"
+          >
+            <Text style={styles.sendButtonText}>➤</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Made with 💙 using ChatWave
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -434,97 +368,68 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#1237A5",
+    backgroundColor: "#F1F5F9",
   },
 
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FC",
+    backgroundColor: "#F1F5F9",
   },
 
-  // Header
   header: {
-    backgroundColor: "#1237A5",
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 19,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    elevation: 8,
-    shadowColor: "#1237A5",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-  },
-
-  headerTop: {
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 21,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
   },
 
-  brandContainer: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 1,
-    marginRight: 8,
+    flex: 1,
   },
 
-  brandInfo: {
-    flexShrink: 1,
-  },
-
-  logo: {
+  headerAvatar: {
     width: 46,
     height: 46,
-    borderRadius: 16,
+    borderRadius: 23,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 11,
-    overflow: "hidden",
+    marginRight: 12,
   },
 
-  logoText: {
+  headerAvatarText: {
     color: "#2563EB",
-    fontSize: 28,
-    fontWeight: "900",
-  },
-
-  logoWave: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 15,
-    height: 8,
-    backgroundColor: "#BFDBFE",
-    borderTopLeftRadius: 12,
-  },
-
-  brandName: {
     fontSize: 23,
     fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.4,
   },
 
-  brandSubtitle: {
-    color: "#C7D8FF",
-    fontSize: 10,
+  headerInfo: {
+    justifyContent: "center",
+  },
+
+  headerTitle: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+
+  onlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 4,
   },
 
-  headerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.13)",
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-
-  headerBadgeDot: {
+  onlineDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
@@ -532,459 +437,204 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  headerBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.7,
-  },
-
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.11)",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-
-  contactAvatarContainer: {
-    position: "relative",
-  },
-
-  contactAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 17,
-    backgroundColor: "#DBEAFE",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-
-  contactAvatarText: {
-    color: "#1D4ED8",
-    fontWeight: "900",
-    fontSize: 15,
-  },
-
-  onlineDot: {
-    position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#4ADE80",
-    borderWidth: 2,
-    borderColor: "#1237A5",
-  },
-
-  contactInfo: {
-    flex: 1,
-    minWidth: 0,
-    marginLeft: 11,
-  },
-
-  contactName: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#4ADE80",
-    marginRight: 5,
-  },
-
-  contactStatus: {
-    color: "#D7E4FF",
-    fontSize: 10,
-    flexShrink: 1,
+  headerSubtitle: {
+    color: "#DBEAFE",
+    fontSize: 12,
   },
 
   clearButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginLeft: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    marginLeft: 8,
   },
 
-  clearIcon: {
+  clearButtonText: {
     color: "#FFFFFF",
-    fontSize: 19,
-    fontWeight: "700",
-  },
-
-  clearLabel: {
-    color: "#FFFFFF",
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "800",
-    marginTop: 2,
     letterSpacing: 0.5,
   },
 
-  // Conversation
   chatArea: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    backgroundColor: "#F1F5F9",
   },
 
-  conversationHeading: {
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 2,
-    paddingBottom: 12,
-  },
-
-  welcomeIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    backgroundColor: "#E0EAFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-
-  welcomeEmoji: {
-    fontSize: 22,
-  },
-
-  welcomeTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#172554",
-    letterSpacing: -0.2,
-  },
-
-  welcomeDescription: {
-    fontSize: 11,
-    lineHeight: 17,
-    color: "#7B879B",
-    textAlign: "center",
-    marginTop: 5,
-  },
-
-  todayDivider: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    marginTop: 13,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E3E9F3",
-  },
-
-  todayBadge: {
-    backgroundColor: "#E9EEF8",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    marginHorizontal: 10,
-  },
-
-  todayText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#64748B",
-    letterSpacing: 1,
-  },
-
-  messageList: {
-    flex: 1,
-  },
-
-  messageListContent: {
-    paddingTop: 9,
-    paddingBottom: 14,
-    flexGrow: 1,
+  messagesList: {
+    paddingHorizontal: 14,
+    paddingTop: 22,
+    paddingBottom: 18,
   },
 
   messageRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginBottom: 14,
-  },
-
-  otherMessageRow: {
-    justifyContent: "flex-start",
+    marginBottom: 16,
   },
 
   myMessageRow: {
     justifyContent: "flex-end",
   },
 
-  smallAvatar: {
-    width: 29,
-    height: 29,
-    borderRadius: 11,
-    backgroundColor: "#DCE8FF",
+  otherMessageRow: {
+    justifyContent: "flex-start",
+  },
+
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#DBEAFE",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
-    marginBottom: 18,
+    marginBottom: 3,
   },
 
-  smallAvatarText: {
-    color: "#2456C7",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-
-  messageContent: {
-    flexShrink: 1,
-  },
-
-  otherMessageContent: {
-    alignItems: "flex-start",
-  },
-
-  myMessageContent: {
-    alignItems: "flex-end",
+  avatarText: {
+    color: "#2563EB",
+    fontWeight: "800",
+    fontSize: 14,
   },
 
   messageBubble: {
-    paddingHorizontal: 15,
-    paddingVertical: 11,
-    borderRadius: 19,
+    paddingHorizontal: 14,
+    paddingTop: 11,
+    paddingBottom: 8,
+    borderRadius: 17,
+    minWidth: 85,
   },
 
-  otherBubble: {
+  myMessageBubble: {
+    backgroundColor: "#2563EB",
+    borderBottomRightRadius: 5,
+  },
+
+  otherMessageBubble: {
     backgroundColor: "#FFFFFF",
     borderBottomLeftRadius: 5,
     borderWidth: 1,
-    borderColor: "#E8EDF6",
-    elevation: 1,
-    shadowColor: "#64748B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-  },
-
-  myBubble: {
-    backgroundColor: "#2563EB",
-    borderBottomRightRadius: 5,
-    elevation: 2,
-    shadowColor: "#2563EB",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    borderColor: "#E2E8F0",
   },
 
   messageText: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  otherMessageText: {
-    color: "#334155",
+    fontSize: 15,
+    lineHeight: 22,
   },
 
   myMessageText: {
     color: "#FFFFFF",
   },
 
-  messageMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 5,
-    marginHorizontal: 3,
-  },
-
-  otherMessageMeta: {
-    justifyContent: "flex-start",
-  },
-
-  myMessageMeta: {
-    justifyContent: "flex-end",
+  otherMessageText: {
+    color: "#1E293B",
   },
 
   messageTime: {
-    fontSize: 9,
+    fontSize: 10,
+    marginTop: 5,
+    alignSelf: "flex-end",
+  },
+
+  myMessageTime: {
+    color: "#DBEAFE",
   },
 
   otherMessageTime: {
     color: "#94A3B8",
   },
 
-  myMessageTime: {
-    color: "#8492AA",
-  },
-
-  readReceipt: {
-    fontSize: 11,
-    color: "#2563EB",
-    fontWeight: "900",
-    marginLeft: 4,
-  },
-
-  // Typing indicator
   typingRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
   },
 
   typingBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+    height: 38,
+    minWidth: 65,
     borderRadius: 17,
     borderBottomLeftRadius: 5,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E8EDF6",
+    borderColor: "#E2E8F0",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
   },
 
-  typingDots: {
-    color: "#2563EB",
-    fontSize: 10,
-    marginRight: 8,
-    letterSpacing: 1,
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#64748B",
   },
 
-  typingLabel: {
-    color: "#64748B",
-    fontSize: 10,
-  },
-
-  emptyState: {
+  emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 28,
   },
 
-  emptyEmoji: {
-    fontSize: 36,
-    marginBottom: 12,
+  emptyIconCircle: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+
+  emptyIcon: {
+    fontSize: 37,
   },
 
   emptyTitle: {
-    color: "#172554",
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "800",
-    textAlign: "center",
+    color: "#1E293B",
+    marginBottom: 8,
   },
 
-  emptyDescription: {
-    color: "#7B879B",
-    fontSize: 12,
-    marginTop: 7,
-    textAlign: "center",
-  },
-
-  // Composer
-  composerArea: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 15,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 8 : 10,
-    borderTopWidth: 1,
-    borderTopColor: "#E8EDF5",
-  },
-
-  composer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    backgroundColor: "#F5F7FB",
-    borderRadius: 25,
-    paddingLeft: 7,
-    paddingRight: 5,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: "#E1E8F3",
-  },
-
-  emojiToggle: {
-    width: 38,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 3,
-  },
-
-  emojiToggleText: {
-    fontSize: 23,
-  },
-
-  input: {
-    flex: 1,
-    color: "#0F172A",
+  emptySubtitle: {
     fontSize: 14,
-    lineHeight: 20,
-    maxHeight: 110,
-    minHeight: 42,
-    paddingTop: 10,
-    paddingBottom: 9,
-    paddingRight: 8,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 21,
   },
 
-  sendButton: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 4,
-    elevation: 2,
-    shadowColor: "#2563EB",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-
-  sendButtonDisabled: {
-    backgroundColor: "#A8C5FF",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-
-  sendIcon: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "800",
-    marginLeft: 3,
-    marginTop: -2,
-  },
-
-  // Emoji picker
   emojiPanel: {
-    backgroundColor: "#F5F7FB",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#E1E8F3",
-    padding: 12,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+
+  emojiPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
 
-  emojiTitle: {
-    color: "#334155",
-    fontSize: 12,
+  emojiPanelTitle: {
+    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 10,
+    color: "#334155",
+  },
+
+  closeEmojiButton: {
+    fontSize: 18,
+    color: "#64748B",
+    paddingHorizontal: 6,
   },
 
   emojiGrid: {
@@ -994,50 +644,91 @@ const styles = StyleSheet.create({
   },
 
   emojiButton: {
-    width: "23%",
+    width: "12.5%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 9,
-    marginBottom: 4,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    paddingVertical: 7,
   },
 
   emojiText: {
-    fontSize: 25,
+    fontSize: 24,
   },
 
-  // Footer
+  inputArea: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    gap: 8,
+  },
+
+  emojiToggle: {
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 1,
+  },
+
+  emojiToggleActive: {
+    backgroundColor: "#DBEAFE",
+  },
+
+  emojiToggleText: {
+    fontSize: 23,
+  },
+
+  textInput: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 110,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 22,
+    paddingHorizontal: 17,
+    paddingTop: 12,
+    paddingBottom: 10,
+    fontSize: 15,
+    color: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 1,
+  },
+
+  sendButtonDisabled: {
+    backgroundColor: "#93C5FD",
+  },
+
+  sendButtonText: {
+    fontSize: 23,
+    color: "#FFFFFF",
+    fontWeight: "800",
+    transform: [{ rotate: "-25deg" }],
+    marginLeft: -2,
+  },
+
   footer: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 11,
-    paddingHorizontal: 3,
-  },
-
-  footerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-    marginRight: 8,
-  },
-
-  footerLock: {
-    color: "#16A34A",
-    fontSize: 8,
-    marginRight: 6,
+    justifyContent: "center",
+    paddingVertical: 7,
+    backgroundColor: "#FFFFFF",
   },
 
   footerText: {
+    fontSize: 10,
     color: "#94A3B8",
-    fontSize: 9,
-  },
-
-  footerBrand: {
-    color: "#64748B",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
   },
 });
