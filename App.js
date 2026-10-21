@@ -12,29 +12,38 @@ import {
   Platform,
   SafeAreaView,
   useWindowDimensions,
+  Alert,
 } from "react-native";
+
+const INITIAL_MESSAGES = [
+  {
+    id: "1",
+    text: "Hey! 👋 Welcome to ChatWave.",
+    sender: "other",
+    time: "09:40 AM",
+  },
+  {
+    id: "2",
+    text: "A simple place to connect and chat. Send your first message!",
+    sender: "other",
+    time: "09:40 AM",
+  },
+];
+
+const EMOJIS = ["😀", "😂", "❤️", "😍", "👍", "🔥", "🎉", "👋"];
 
 export default function App() {
   const [messageText, setMessageText] = useState("");
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+
   const flatListRef = useRef(null);
+  const typingTimerRef = useRef(null);
+  const replyTimerRef = useRef(null);
+
   const { width } = useWindowDimensions();
-
   const isCompact = width < 360;
-
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      text: "Hey! 👋 Welcome to ChatWave.",
-      sender: "other",
-      time: "09:40 AM",
-    },
-    {
-      id: "2",
-      text: "A simple place to connect and chat. Send your first message!",
-      sender: "other",
-      time: "09:40 AM",
-    },
-  ]);
 
   useEffect(() => {
     if (messages.length > 2) {
@@ -44,31 +53,90 @@ export default function App() {
 
       return () => clearTimeout(timer);
     }
-  }, [messages]);
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(typingTimerRef.current);
+      clearTimeout(replyTimerRef.current);
+    };
+  }, []);
+
+  const getCurrentTime = () =>
+    new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const addMessage = (text, sender) => ({
+    id: `${Date.now()}-${Math.random()}`,
+    text,
+    sender,
+    time: getCurrentTime(),
+  });
 
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
 
     if (!trimmedMessage) return;
 
-    const now = new Date();
+    // Cancel any previous simulated reply timers.
+    clearTimeout(typingTimerRef.current);
+    clearTimeout(replyTimerRef.current);
 
-    const newMessage = {
-      id: `${Date.now()}-${Math.random()}`,
-      text: trimmedMessage,
-      sender: "me",
-      time: now.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages((previousMessages) => [
-      ...previousMessages,
-      newMessage,
+    setMessages((previous) => [
+      ...previous,
+      addMessage(trimmedMessage, "me"),
     ]);
 
     setMessageText("");
+    setShowEmojis(false);
+    setIsTyping(true);
+
+    // Demo only: simulate the other person's response.
+    typingTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+
+      replyTimerRef.current = setTimeout(() => {
+        setMessages((previous) => [
+          ...previous,
+          addMessage(
+            "Thanks for your message! 👋 This is a ChatWave demo reply.",
+            "other"
+          ),
+        ]);
+      }, 450);
+    }, 1500);
+  };
+
+  const insertEmoji = (emoji) => {
+    setMessageText((previous) => previous + emoji);
+  };
+
+  const clearConversation = () => {
+    Alert.alert(
+      "Clear conversation?",
+      "This will remove all messages from the current chat.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => {
+            clearTimeout(typingTimerRef.current);
+            clearTimeout(replyTimerRef.current);
+
+            setMessages([]);
+            setIsTyping(false);
+            setMessageText("");
+            setShowEmojis(false);
+          },
+        },
+      ]
+    );
   };
 
   const renderMessage = ({ item }) => {
@@ -90,7 +158,9 @@ export default function App() {
         <View
           style={[
             styles.messageContent,
-            isMine ? styles.myMessageContent : styles.otherMessageContent,
+            isMine
+              ? styles.myMessageContent
+              : styles.otherMessageContent,
             { maxWidth: isCompact ? "84%" : "78%" },
           ]}
         >
@@ -103,7 +173,9 @@ export default function App() {
             <Text
               style={[
                 styles.messageText,
-                isMine ? styles.myMessageText : styles.otherMessageText,
+                isMine
+                  ? styles.myMessageText
+                  : styles.otherMessageText,
               ]}
             >
               {item.text}
@@ -113,19 +185,25 @@ export default function App() {
           <View
             style={[
               styles.messageMeta,
-              isMine ? styles.myMessageMeta : styles.otherMessageMeta,
+              isMine
+                ? styles.myMessageMeta
+                : styles.otherMessageMeta,
             ]}
           >
             <Text
               style={[
                 styles.messageTime,
-                isMine ? styles.myMessageTime : styles.otherMessageTime,
+                isMine
+                  ? styles.myMessageTime
+                  : styles.otherMessageTime,
               ]}
             >
               {item.time}
             </Text>
 
-            {isMine && <Text style={styles.readReceipt}>✓✓</Text>}
+            {isMine && (
+              <Text style={styles.readReceipt}>✓✓</Text>
+            )}
           </View>
         </View>
       </View>
@@ -144,7 +222,7 @@ export default function App() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-        {/* App header */}
+        {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.brandContainer}>
@@ -153,7 +231,7 @@ export default function App() {
                 <View style={styles.logoWave} />
               </View>
 
-              <View>
+              <View style={styles.brandInfo}>
                 <Text style={styles.brandName}>ChatWave</Text>
                 <Text style={styles.brandSubtitle}>
                   Your conversations, connected.
@@ -180,19 +258,25 @@ export default function App() {
               <View style={styles.statusRow}>
                 <View style={styles.statusDot} />
                 <Text style={styles.contactStatus}>
-                  Active now · Ready to chat
+                  {isTyping ? "Typing a message..." : "Active now · Ready to chat"}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.chatTypeBadge}>
-              <Text style={styles.chatTypeIcon}>✦</Text>
-              <Text style={styles.chatTypeLabel}>CHAT</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={clearConversation}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Clear conversation"
+            >
+              <Text style={styles.clearIcon}>⌫</Text>
+              <Text style={styles.clearLabel}>CLEAR</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Conversation area */}
+        {/* CHAT AREA */}
         <View style={styles.chatArea}>
           <View style={styles.conversationHeading}>
             <View style={styles.welcomeIcon}>
@@ -216,28 +300,90 @@ export default function App() {
             </View>
           </View>
 
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            style={styles.messageList}
-            contentContainerStyle={styles.messageListContent}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={
-              Platform.OS === "ios" ? "interactive" : "on-drag"
-            }
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            initialNumToRender={15}
-          />
+          {messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>💬</Text>
+              <Text style={styles.emptyTitle}>
+                Start a fresh conversation
+              </Text>
+              <Text style={styles.emptyDescription}>
+                Your messages will appear here.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              style={styles.messageList}
+              contentContainerStyle={styles.messageListContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={
+                Platform.OS === "ios" ? "interactive" : "on-drag"
+              }
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() =>
+                flatListRef.current?.scrollToEnd({
+                  animated: true,
+                })
+              }
+              initialNumToRender={15}
+            />
+          )}
+
+          {/* TYPING INDICATOR */}
+          {isTyping && (
+            <View style={styles.typingRow}>
+              <View style={styles.smallAvatar}>
+                <Text style={styles.smallAvatarText}>CW</Text>
+              </View>
+
+              <View style={styles.typingBubble}>
+                <Text style={styles.typingDots}>● ● ●</Text>
+                <Text style={styles.typingLabel}>
+                  Chat Partner is typing
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Message composer */}
+        {/* MESSAGE COMPOSER */}
         <View style={styles.composerArea}>
+          {/* EMOJI PICKER */}
+          {showEmojis && (
+            <View style={styles.emojiPanel}>
+              <Text style={styles.emojiTitle}>Choose an emoji</Text>
+
+              <View style={styles.emojiGrid}>
+                {EMOJIS.map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={styles.emojiButton}
+                    onPress={() => insertEmoji(emoji)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Insert ${emoji}`}
+                    key={emoji}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View style={styles.composer}>
+            <TouchableOpacity
+              style={styles.emojiToggle}
+              onPress={() => setShowEmojis((previous) => !previous)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Toggle emoji picker"
+            >
+              <Text style={styles.emojiToggleText}>😊</Text>
+            </TouchableOpacity>
+
             <TextInput
               style={styles.input}
               placeholder="Message Chat Partner..."
@@ -249,6 +395,7 @@ export default function App() {
               returnKeyType="default"
               textAlignVertical="center"
               accessibilityLabel="Write a message"
+              onFocus={() => setShowEmojis(false)}
             />
 
             <TouchableOpacity
@@ -322,6 +469,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexShrink: 1,
     marginRight: 8,
+  },
+
+  brandInfo: {
+    flexShrink: 1,
   },
 
   logo: {
@@ -464,27 +615,28 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  chatTypeBadge: {
+  clearButton: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 10,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: 9,
     paddingVertical: 8,
-    borderRadius: 13,
-    marginLeft: 5,
+    borderRadius: 12,
+    marginLeft: 7,
   },
 
-  chatTypeIcon: {
-    color: "#BFDBFE",
-    fontSize: 15,
+  clearIcon: {
+    color: "#FFFFFF",
+    fontSize: 19,
+    fontWeight: "700",
   },
 
-  chatTypeLabel: {
+  clearLabel: {
     color: "#FFFFFF",
     fontSize: 8,
     fontWeight: "800",
-    letterSpacing: 0.8,
-    marginTop: 3,
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
 
   // Conversation
@@ -686,7 +838,64 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  // Message composer
+  // Typing indicator
+  typingRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 10,
+  },
+
+  typingBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    borderRadius: 17,
+    borderBottomLeftRadius: 5,
+    borderWidth: 1,
+    borderColor: "#E8EDF6",
+  },
+
+  typingDots: {
+    color: "#2563EB",
+    fontSize: 10,
+    marginRight: 8,
+    letterSpacing: 1,
+  },
+
+  typingLabel: {
+    color: "#64748B",
+    fontSize: 10,
+  },
+
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+
+  emptyEmoji: {
+    fontSize: 36,
+    marginBottom: 12,
+  },
+
+  emptyTitle: {
+    color: "#172554",
+    fontSize: 15,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  emptyDescription: {
+    color: "#7B879B",
+    fontSize: 12,
+    marginTop: 7,
+    textAlign: "center",
+  },
+
+  // Composer
   composerArea: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 15,
@@ -701,11 +910,23 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     backgroundColor: "#F5F7FB",
     borderRadius: 25,
-    paddingLeft: 16,
+    paddingLeft: 7,
     paddingRight: 5,
     paddingVertical: 5,
     borderWidth: 1,
     borderColor: "#E1E8F3",
+  },
+
+  emojiToggle: {
+    width: 38,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 3,
+  },
+
+  emojiToggleText: {
+    fontSize: 23,
   },
 
   input: {
@@ -728,7 +949,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 4,
-    marginBottom: 0,
     elevation: 2,
     shadowColor: "#2563EB",
     shadowOffset: { width: 0, height: 2 },
@@ -748,6 +968,43 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginLeft: 3,
     marginTop: -2,
+  },
+
+  // Emoji picker
+  emojiPanel: {
+    backgroundColor: "#F5F7FB",
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: "#E1E8F3",
+    padding: 12,
+    marginBottom: 10,
+  },
+
+  emojiTitle: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+
+  emojiGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  emojiButton: {
+    width: "23%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 9,
+    marginBottom: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+  },
+
+  emojiText: {
+    fontSize: 25,
   },
 
   // Footer
